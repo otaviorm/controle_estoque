@@ -3,7 +3,7 @@ import sqlite3
 conexao = sqlite3.connect("estoque.db")
 cursor =  conexao.cursor()
 
-cursor.execute("DROP TABLE IF EXISTS materiais")
+""" cursor.execute("DROP TABLE IF EXISTS materiais") """ 
 
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS materiais (
@@ -14,7 +14,8 @@ cursor.execute("""
     preco REAL NOT NULL,
     responsavel TEXT NOT NULL,
     data_saida TEXT NOT NULL,
-    data_retorno TEXT
+    data_retorno TEXT,
+    rendimento REAL
 )
 """)
 conexao.commit()
@@ -26,7 +27,8 @@ def menu():
             print("[1] Cadastrar Material")
             print("[2] Listar Cadastros")
             print("[3] Pesquisar por Responsavel ou Data")
-            print("[4] Sair")
+            print("[4] Retorno e Rendimento")
+            print("[5] Sair")
 
             opcao = input("Escolha uma opçao: ")
 
@@ -37,6 +39,8 @@ def menu():
             elif opcao == '3':
                 pesquisar_materiais()
             elif opcao == '4':
+                calcular_rendimento()
+            elif opcao == '5':
                 print("O sistema sera encerrado. Ate a proxima!\n")
                 break
 
@@ -48,7 +52,7 @@ def cadastrar_materiais():
     tipo = input("Informe o tipo de material? (Bruto ou processado): ")
 
     try:
-        peso = float(input("Informe o peso do material (kg): "))
+        peso = float(input("Informe o peso/quantidade do material (Em kg ou por unidade): "))
         preco = float(input("Informe o preço do material (Em kg ou por unidade): "))
     except:
         print("Preço e Peso devem ser valores numericos.")
@@ -57,7 +61,7 @@ def cadastrar_materiais():
     responsavel = input("Informe o responsavel pelo material: ")
     data_saida = input("Informe a data de saida do material (DD-MM-AAAA): ")
 
-    cursor.execute("INSERT INTO materiais (nome, tipo, peso, preco, responsavel, data_saida, data_retorno) VALUES (?, ?, ?, ?, ?, ?, ?)", (nome, tipo, peso, preco, responsavel, data_saida, None))
+    cursor.execute("INSERT INTO materiais (nome, tipo, peso, preco, responsavel, data_saida, data_retorno, rendimento) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (nome, tipo, peso, preco, responsavel, data_saida, None , None))
 
     conexao.commit()
     print("Atividade cadastrada com sucesso!")
@@ -99,6 +103,35 @@ def pesquisar_materiais():
         print(f"ID: {material[0]} | Nome: {material[1]} | Tipo: {material[2]} | Peso: {material[3]} | Preço: {material[4]} \n")
         print(f"Responsavel: {material[5]} | Data de Saida: {material[6]} | Data de Retorno: {material[7]}")
         print("-" * 80)
+
+def calcular_rendimento():
+    listar_materiais()
+    id_material = input("Informe o ID do material que retornou: ")
+    cursor.execute("SELECT peso FROM materiais WHERE id = ?", (id_material,))
+    resultado = cursor.fetchone()
+
+    if resultado is None:
+        print("ID não encontrado...\n")
+        return
+
+    peso_inicial = resultado[0]
+    peso_retorno = float(input("Informe o peso do material já processado: "))
+    data_retorno = input("Informe a data de retorno do material processado: ")
+
+    rendimento = (peso_retorno / peso_inicial) * 100
+    perda = 100 - rendimento
+
+    cursor.execute(""" UPDATE materiais
+                   SET peso_retorno = ?, data_retorno = ?, rendimento = ?
+                   WHERE id = ?""", (peso_retorno,data_retorno,id_material, rendimento))
+    
+    conexao.commit()
+    print(f"Retorno atualizado com sucesso!\nRendimento do material: {rendimento:.2f}% e perda de {perda:.2f}%.\n")
+
+
+        
+ 
+
 
 menu()
 
